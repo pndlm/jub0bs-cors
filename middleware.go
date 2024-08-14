@@ -3,6 +3,7 @@ package cors
 import (
 	"maps"
 	"net/http"
+	"slices"
 	"sync"
 
 	"github.com/jub0bs/cors/internal/headers"
@@ -391,7 +392,9 @@ func (icfg *internalConfig) processACRH(
 ) bool {
 	// Fetch-compliant browsers send at most one ACRH header;
 	// see https://fetch.spec.whatwg.org/#cors-preflight-fetch-0 (step 5).
-	acrh, acrhSgl, found := headers.First(reqHdrs, headers.ACRH)
+	// 20240813 To accomodate for AWS API Gateway,
+	// replacing headers.First with headers.All
+	acrh, acrhSgl, found := headers.All(reqHdrs, headers.ACRH)
 	if !found {
 		return true
 	}
@@ -505,4 +508,15 @@ func (m *Middleware) Config() *Config {
 	icfg = m.icfg
 	m.mu.RUnlock()
 	return newConfig(icfg)
+}
+
+// 20240813 Hack to allow custom origin scheme
+// to pass validation
+func AddAllowedScheme(scheme string) {
+	if !slices.Contains(origins.AllowedSchemes, scheme) {
+		origins.AllowedSchemes = append(origins.AllowedSchemes, scheme)
+	}
+	if len(scheme) > origins.MaxSchemeLen {
+		origins.MaxSchemeLen = len(scheme)
+	}
 }

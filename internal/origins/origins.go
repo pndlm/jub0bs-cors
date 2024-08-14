@@ -17,12 +17,19 @@ const (
 	// see https://devblogs.microsoft.com/oldnewthing/20120412-00/?p=7873.
 	maxHostLen = 253
 	// maxSchemeLen is the maximum length of the allowed schemes.
-	maxSchemeLen = len(schemeHTTPS)
+	// maxSchemeLen = len(schemeHTTPS)
 	// maxPortLen is the maximum length of a port's decimal representation.
 	maxPortLen = len("65535")
 	// maxHostPortLen is the maximum length of an origin's host-port part.
 	maxHostPortLen = maxHostLen + 1 + maxPortLen // 1 for colon character
 )
+
+var AllowedSchemes = []string{
+	schemeHTTPS,
+	schemeHTTP,
+}
+
+var MaxSchemeLen = len(schemeHTTPS)
 
 // Origin represents a (tuple) [Web origin].
 //
@@ -45,7 +52,7 @@ var zeroOrigin Origin
 // In particular, the scheme and port of the resulting origin are guaranteed
 // to be valid, but its host isn't.
 func Parse(str string) (Origin, bool) {
-	const maxOriginLen = maxSchemeLen + len(schemeHostSep) + maxHostPortLen
+	maxOriginLen := MaxSchemeLen + len(schemeHostSep) + maxHostPortLen
 	if len(str) > maxOriginLen {
 		return zeroOrigin, false
 	}
@@ -159,13 +166,11 @@ func fastParseHost(str string) (Host, string, bool) {
 // i.e. "https" and "http". It returns the scanned scheme, the unconsumed part
 // of the input string, and a bool that indicates success of failure.
 func scanHttpScheme(str string) (string, string, bool) {
-	rest, ok := consume(schemeHTTPS, str)
-	if ok {
-		return schemeHTTPS, rest, true
-	}
-	rest, ok = consume(schemeHTTP, str)
-	if ok {
-		return schemeHTTP, rest, true
+	for _, allowedScheme := range AllowedSchemes {
+		rest, ok := consume(allowedScheme, str)
+		if ok {
+			return allowedScheme, rest, true
+		}
 	}
 	return "", str, false
 }

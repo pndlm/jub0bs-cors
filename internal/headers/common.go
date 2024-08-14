@@ -2,6 +2,7 @@ package headers
 
 import (
 	"net/http"
+	"strings"
 
 	"golang.org/x/net/http/httpguts"
 )
@@ -74,4 +75,16 @@ func First(hdrs http.Header, k string) (string, []string, bool) {
 		return "", nil, false
 	}
 	return v[0], v[:1], true
+}
+
+// Account for issue with AWS API Gateway feeding multiple values for
+// Access-Control-Request-Headers in a way where r.Header.Values() picks
+// them all up, but r.Header.Get() does not.
+// https://github.com/rs/cors/commit/5c2b877d2a033557c474bf5f9ed03626bd774839
+func All(hdrs http.Header, k string) (string, []string, bool) {
+	v := hdrs.Values(k)
+	if len(v) == 0 {
+		return "", nil, false
+	}
+	return strings.Join(v, ","), v, true
 }
